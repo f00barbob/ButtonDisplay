@@ -1,0 +1,131 @@
+
+local mouse_was_down = false
+local accumulate = 0
+local window_height = 339
+local window_width = 224
+
+
+require("AnAL")
+require("buttondisplay")
+require("biasdisplay")
+
+local canvas_height = window_height * 2
+local canvas_width = window_width * 2
+
+local fade_start = 128 -- with respect to canvas size
+local scroll_rate = 600
+
+function love.load()
+	print("lovely")
+	-- we draw on a large canvas and scale it by 1/2 later on
+	cnv_buttons = love.graphics.newCanvas(canvas_width, canvas_height )
+	love.window.setMode(window_width, window_height)
+	love.window.setTitle("RNGDispTest")
+
+	-- load the images
+	img_arrow = love.graphics.newImage("arrow.png")
+	img_btn_a = love.graphics.newImage("btn_a.png")
+	img_btn_b = love.graphics.newImage("btn_b.png")
+	img_btn_start = love.graphics.newImage("btn_start.png")
+
+	-- AnALyze them
+	anm_arrow = newAnimation(img_arrow,64,64,0.1,0)
+	anm_btn_a = newAnimation(img_btn_a,64,64,0.1,0)
+	anm_btn_b = newAnimation(img_btn_b,64,64,0.1,0)
+	anm_btn_start = newAnimation(img_btn_start,64,64,0.1,0)
+
+	-- spawn the netthread
+	print("ready to thread")
+--	netthread = love.thread.newThread("netthread.lua")
+	--netchannel = love.thread.newChannel("netchan")
+	--netthread:start()
+--	inbound = {}
+end
+
+function love.update(dt)
+	accumulate = accumulate + dt
+	if accumulate  > .04 then
+		do_randy()
+		accumulate = 0
+	end
+
+	-- update the sprite animations
+	anm_arrow:update(dt)
+	anm_btn_a:update(dt)
+	anm_btn_b:update(dt)
+	anm_btn_start:update(dt)
+
+	-- update the sprites' locations, dt parameter, pixels/s on the canvas
+	buttons.update(dt, scroll_rate, fade_start) 
+
+	if love.mouse.isDown("l") == true and mouse_was_down == false then
+	--spam one sprite per left click
+		mouse_was_down = true 
+		do_randy()
+	elseif love.mouse.isDown("r") == true then
+	 --vomit sprites so long as right button is held
+		do_randy()
+	elseif love.mouse.isDown("l") == false then
+		mouse_was_down = false -- mouse released
+	end
+
+	-- netcode
+--	local	netmsg =  netchannel:pop()
+
+--	if netmsg then	do_randy(netmsg) end
+end
+
+
+
+function love.draw()
+	print("drawing")
+	-- draw the button display to its canvas
+	love.graphics.setCanvas(cnv_buttons)
+	render_button_display()
+	-- reset to framebuffer
+	love.graphics.setCanvas()
+	-- draw the button canvas on framebuffer
+	love.graphics.draw(cnv_buttons, 0, 0, 0, .5, .5)
+	-- print the currect button sprite count
+	love.graphics.print(buttons.getcount(),20,200)
+end
+
+function do_randy(randval)
+	-- i'm feeling randy, baby
+	spawn_y = canvas_height
+	if randval then
+		randy = randval
+	else
+		local randy = math.random(1,7)
+	end
+
+	if randy == 1 then
+		buttons.add(anm_arrow, 0, spawn_y, "left")
+	elseif randy == 2 then
+		buttons.add(anm_arrow, 64,spawn_y, "down")
+	elseif randy == 3 then
+		buttons.add(anm_arrow, 128,spawn_y, "up")
+	elseif randy == 4 then
+		buttons.add(anm_arrow, 192, spawn_y, "right")
+	elseif randy == 5 then
+		buttons.add(anm_btn_a, 256,spawn_y)
+	elseif randy == 6 then
+		buttons.add(anm_btn_b, 320, spawn_y)
+	elseif randy == 7 then
+		buttons.add(anm_btn_start, 384, spawn_y)
+	end
+end
+
+
+
+function render_button_display()
+	cnv_buttons:clear()
+	for i, b in ipairs(buttons) do
+		draw_button(b.sprite, b.x, b.y, b.rot, b.alpha)
+	end
+end
+
+
+
+
+
